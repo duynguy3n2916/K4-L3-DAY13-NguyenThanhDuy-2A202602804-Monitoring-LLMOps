@@ -7,7 +7,12 @@ primary_slo:
     total_event: 'event == "request_received"'
   target_percent: 99.5
   error_budget_percent: 0.5
-  note: Học viên phải giải thích hoặc điều chỉnh ngưỡng bằng baseline của mình.
+  error_budget_example: 50 bad requests per 10000 total requests
+  note: >-
+    A request is good only when it reaches response_sent within 3000 ms.
+    The 99.5% target leaves a 0.5% error budget over 28 days. The current
+    baseline must be investigated when P95 exceeds 3000 ms; the threshold is
+    not raised merely to hide a regression.
 guardrails:
   error_rate_pct_max: 2
   daily_cost_usd_max: 2.5

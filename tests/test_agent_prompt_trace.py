@@ -20,12 +20,22 @@ class RecordingLangfuseClient:
     def __init__(self) -> None:
         self.prompt = ManagedPrompt()
         self.span_updates: list[dict] = []
+        self.observations: list[dict] = []
+        self.generation_updates: list[dict] = []
 
     def get_prompt(self, name: str, **kwargs):
         return self.prompt
 
     def update_current_span(self, **kwargs) -> None:
         self.span_updates.append(kwargs)
+
+    @contextmanager
+    def start_as_current_observation(self, **kwargs):
+        self.observations.append(kwargs)
+        yield self
+
+    def update_current_generation(self, **kwargs) -> None:
+        self.generation_updates.append(kwargs)
 
 
 def test_agent_records_prompt_version_with_v4_observation_api(monkeypatch) -> None:
@@ -67,3 +77,16 @@ def test_agent_records_prompt_version_with_v4_observation_api(monkeypatch) -> No
     assert span_update["version"] == "3"
     assert propagated[0]["metadata"]["correlation_id"] == "req-12345678"
     assert propagated[-1]["prompt"] is client.prompt
+    assert client.observations[-1]["name"] == "llm-generation"
+    assert client.observations[-1]["as_type"] == "generation"
+    assert client.observations[-1]["model"] == agent.model
+    assert client.observations[-1]["prompt"] is client.prompt
+    generation_update = client.generation_updates[-1]
+    assert generation_update["usage_details"]["input"] > 0
+    assert generation_update["usage_details"]["output"] > 0
+    assert generation_update["usage_details"]["total"] == (
+        generation_update["usage_details"]["input"]
+        + generation_update["usage_details"]["output"]
+    )
+    assert generation_update["cost_details"]["total"] > 0
+    assert generation_update["metadata"]["ttft_ms"] > 0
